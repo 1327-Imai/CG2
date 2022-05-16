@@ -253,16 +253,50 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 
 #pragma region//更新処理用変数
 
+	float transrateX = 0.0f;
+	float transrateY = 0.0f;
+	float scaleX = 1.0f;
+	float scaleY = 1.0f;
+	float angle = 0;
+
+	float affineTransrate[3][3] = {
+		{1 , 0 , transrateX} ,
+		{0 , 1 , transrateY} ,
+		{0 , 0 , 1.0f} ,
+	};
+
+	float affineRotation[3][3] = {
+		{cos(angle) , -sin(angle) , 0} ,
+		{sin(angle) , cos(angle) , 0} ,
+		{0 , 0 , 1.0f} ,
+	};
+
+	float affineScale[3][3] = {
+		{scaleX * 1 , 0 , 0} ,
+		{0 , scaleY * 1 , 0} ,
+		{0 , 0 , 1.0f} ,
+	};
+
+	float boxMoved[4][3] = {0};
+
+	float boxRotated[4][3] = {0};
+
+	float boxEnlarged[4][3] = {0};
+
+	float distanceFromOriginX = 0;
+	float distanceFromOriginY = 0;
+
 #pragma endregion//更新処理用変数
 
 #pragma region//描画初期化処理
 
+#pragma region//頂点リスト:vertices
 	//頂点データ
 	XMFLOAT3 vertices[] = {
-		{-0.5f , -0.5f , 0.0f} , //左下 インデックス0
-		{-0.5f , +0.5f , 0.0f} , //左上 インデックス1
-		{+0.5f , -0.5f , 0.0f} , //右下 インデックス2
-		{+0.5f , +0.5f , 0.0f} , //右上 インデックス3
+		{-0.2f , -0.2f , 1.0f} , //左下 インデックス0
+		{-0.2f , +0.2f , 1.0f} , //左上 インデックス1
+		{+0.2f , -0.2f , 1.0f} , //右下 インデックス2
+		{+0.2f , +0.2f , 1.0f} , //右上 インデックス3
 	};
 
 	//インデックスデータ
@@ -343,12 +377,105 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 	vbView.SizeInBytes = sizeVB;
 	//頂点１つ分のデータサイズ
 	vbView.StrideInBytes = sizeof(XMFLOAT3);
-	
+
 	//インデックスバッファビューの作成
 	D3D12_INDEX_BUFFER_VIEW ibView{};
 	ibView.BufferLocation = indexBuff->GetGPUVirtualAddress();
 	ibView.Format = DXGI_FORMAT_R16_UINT;
 	ibView.SizeInBytes = sizeIB;
+#pragma endregion//頂点リスト:vertices
+
+#pragma region//頂点リスト:boxVertices
+	//頂点データ
+	XMFLOAT3 boxVertices[4] = {
+		{0.0f , 0.0f , 0.0f}
+	};
+
+	//インデックスデータ
+	uint16_t boxIndices[] = {
+		0 , 1 , 2 , //三角形1つ目
+		1 , 2 , 3 , //三角形2つ目
+	};
+
+	//頂点データ全体のサイズ = 頂点データ一つ分のサイズ * 頂点データの要素数
+	UINT sizeBoxVB = static_cast<UINT>(sizeof(XMFLOAT3) * _countof(boxVertices));
+
+	//インデックスデータ全体のサイズ
+	UINT sizeBoxIB = static_cast<UINT>(sizeof(uint16_t) * _countof(boxIndices));
+
+	//頂点バッファの設定
+	D3D12_HEAP_PROPERTIES boxHeapProp{};		//ヒープ設定
+	boxHeapProp.Type = D3D12_HEAP_TYPE_UPLOAD;	//GPUへの転送用
+
+	//リソース設定
+	D3D12_RESOURCE_DESC boxResDesc{};
+	boxResDesc.Dimension = D3D12_RESOURCE_DIMENSION_BUFFER;
+	boxResDesc.Width = sizeBoxIB; //頂点データ全体のサイズ
+	boxResDesc.Height = 1;
+	boxResDesc.DepthOrArraySize = 1;
+	boxResDesc.MipLevels = 1;
+	boxResDesc.SampleDesc.Count = 1;
+	boxResDesc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
+
+	//頂点バッファの生成
+	ID3D12Resource* boxVertBuff = nullptr;
+	result = device->CreateCommittedResource(
+		&boxHeapProp ,	//ヒープ設定
+		D3D12_HEAP_FLAG_NONE ,
+		&boxResDesc ,	//リソース設定
+		D3D12_RESOURCE_STATE_GENERIC_READ ,
+		nullptr ,
+		IID_PPV_ARGS(&boxVertBuff)
+	);
+	assert(SUCCEEDED(result));
+
+	//インデックスバッファの生成
+	ID3D12Resource* boxIndexBuff = nullptr;
+	result = device->CreateCommittedResource(
+		&boxHeapProp ,	//ヒープ設定
+		D3D12_HEAP_FLAG_NONE ,
+		&boxResDesc ,	//リソース設定
+		D3D12_RESOURCE_STATE_GENERIC_READ ,
+		nullptr ,
+		IID_PPV_ARGS(&boxIndexBuff)
+	);
+	assert(SUCCEEDED(result));
+
+	//GPU上のバッファに対応した仮想メモリ(メインメモリ上)を取得
+	XMFLOAT3* boxVertMap = nullptr;
+	result = boxVertBuff->Map(0 , nullptr , (void**)&boxVertMap);
+	//全頂点に対して
+	for (int i = 0; i < _countof(boxVertices); i++) {
+		boxVertMap[i] = boxVertices[i];	//座標をコピー
+	}
+	//繋がりを解除
+	boxVertBuff->Unmap(0 , nullptr);
+
+	//インデックスバッファをマッピング
+	uint16_t* boxIndexMap = nullptr;
+	result = boxIndexBuff->Map(0 , nullptr , (void**)&boxIndexMap);
+	//全インデックスに対して
+	for (int i = 0; i < _countof(boxIndices); i++) {
+		boxIndexMap[i] = boxIndices[i];	//座標をコピー
+	}
+	//繋がりを解除
+	boxIndexBuff->Unmap(0 , nullptr);
+
+	//頂点バッファビューの作成
+	D3D12_VERTEX_BUFFER_VIEW boxVbView{};
+	//GPU仮想アドレス
+	boxVbView.BufferLocation = boxVertBuff->GetGPUVirtualAddress();
+	//頂点バッファのサイズ
+	boxVbView.SizeInBytes = sizeBoxVB;
+	//頂点１つ分のデータサイズ
+	boxVbView.StrideInBytes = sizeof(XMFLOAT3);
+
+	//インデックスバッファビューの作成
+	D3D12_INDEX_BUFFER_VIEW boxIbView{};
+	boxIbView.BufferLocation = boxIndexBuff->GetGPUVirtualAddress();
+	boxIbView.Format = DXGI_FORMAT_R16_UINT;
+	boxIbView.SizeInBytes = sizeBoxIB;
+#pragma endregion//頂点リスト:boxVertices
 
 	//頂点シェーダーファイルの読み込みとコンパイル
 	ID3DBlob* vsBlob = nullptr;		//頂点シェーダーオブジェクト
@@ -577,6 +704,185 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 
 #pragma region//更新処理
 
+		//キー入力に応じて変数の値を増減する
+		if (key[DIK_UP]) {
+			transrateY += 5.0/window_height;
+		}
+		if (key[DIK_DOWN]) {
+			transrateY -= 5.0 / window_height;
+		}
+		if (key[DIK_LEFT]) {
+			transrateX -= 5.0 / window_width;
+		}
+		if (key[DIK_RIGHT]) {
+			transrateX += 5.0 / window_width;
+		}
+
+		if (key[DIK_A]) {
+			scaleX -= 0.01;
+		}
+		if (key[DIK_D]) {
+			scaleX += 0.01;
+		}
+		if (key[DIK_S]) {
+			scaleY -= 0.01;
+		}
+		if (key[DIK_W]) {
+			scaleY += 0.01;
+		}
+
+		if (key[DIK_Q]) {
+			angle -= PI / 360;
+		}
+		if (key[DIK_E]) {
+			angle += PI / 360;
+		}
+
+		if (key[DIK_R]) {
+			transrateX = 0;
+			transrateY = 0;
+			scaleX = 1;
+			scaleY = 1;
+			angle = 0;
+		}
+
+		affineTransrate[0][2] = transrateX;
+		affineTransrate[1][2] = transrateY;
+		affineScale[0][0] = scaleX;
+		affineScale[1][1] = scaleY;
+		affineRotation[0][0] = cos(angle);
+		affineRotation[0][1] = sin(angle);
+		affineRotation[1][0] = -sin(angle);
+		affineRotation[1][1] = cos(angle);
+
+
+		//アフィン変換
+#pragma region//移動
+	//原点からの距離を取得
+		distanceFromOriginX = vertices[0].x;
+		distanceFromOriginY = vertices[0].y;
+
+		//原点まで移動する(現在の座標から原点からの距離を引く)
+		for (int i = 0; i < 4; i++) {
+			vertices[i].x -= distanceFromOriginX;
+			vertices[i].y -= distanceFromOriginY;
+		}
+
+		//アフィン変換をする
+		for (int i = 0; i < 4; i++) {
+			boxMoved[i][0] =
+				affineTransrate[0][0] * vertices[i].x +
+				affineTransrate[0][1] * vertices[i].y +
+				affineTransrate[0][2] * vertices[i].z;
+
+			boxMoved[i][1] =
+				affineTransrate[1][0] * vertices[i].x +
+				affineTransrate[1][1] * vertices[i].y +
+				affineTransrate[1][2] * vertices[i].z;
+
+			boxMoved[i][2] =
+				affineTransrate[2][0] * vertices[i].x +
+				affineTransrate[2][1] * vertices[i].y +
+				affineTransrate[2][2] * vertices[i].z;
+		};
+
+		//原点からの距離を足して元の位置に戻す
+		for (int i = 0; i < 4; i++) {
+			vertices[i].x += distanceFromOriginX;
+			vertices[i].y += distanceFromOriginY;
+			boxMoved[i][0] += distanceFromOriginX;
+			boxMoved[i][1] += distanceFromOriginY;
+		}
+#pragma endregion//移動
+
+#pragma region//回転
+		//原点からの距離を取得
+		distanceFromOriginX = boxMoved[0][0];
+		distanceFromOriginY = boxMoved[0][1];
+
+		//原点まで移動する(現在の座標から原点からの距離を引く)
+		for (int i = 0; i < 4; i++) {
+			boxMoved[i][0] -= distanceFromOriginX;
+			boxMoved[i][1] -= distanceFromOriginY;
+		}
+
+		//アフィン変換をする
+		for (int i = 0; i < 4; i++) {
+			boxRotated[i][0] =
+				affineRotation[0][0] * boxMoved[i][0] +
+				affineRotation[0][1] * boxMoved[i][1] +
+				affineRotation[0][2] * boxMoved[i][2];
+
+			boxRotated[i][1] =
+				affineRotation[1][0] * boxMoved[i][0] +
+				affineRotation[1][1] * boxMoved[i][1] +
+				affineRotation[1][2] * boxMoved[i][2];
+
+			boxRotated[i][2] =
+				affineRotation[2][0] * boxMoved[i][0] +
+				affineRotation[2][1] * boxMoved[i][1] +
+				affineRotation[2][2] * boxMoved[i][2];
+		};
+
+		//原点からの距離を足して元の位置に戻す
+		for (int i = 0; i < 4; i++) {
+			boxMoved[i][0] += distanceFromOriginX;
+			boxMoved[i][1] += distanceFromOriginY;
+			boxRotated[i][0] += distanceFromOriginX;
+			boxRotated[i][1] += distanceFromOriginY;
+		}
+#pragma endregion//回転
+
+#pragma region//拡大縮小
+		//原点からの距離を取得
+		distanceFromOriginX = boxRotated[0][0];
+		distanceFromOriginY = boxRotated[0][1];
+
+		//原点まで移動する(現在の座標から原点からの距離を引く)
+		for (int i = 0; i < 4; i++) {
+			boxRotated[i][0] -= distanceFromOriginX;
+			boxRotated[i][1] -= distanceFromOriginY;
+		}
+
+		//アフィン変換をする
+		for (int i = 0; i < 4; i++) {
+			boxEnlarged[i][0] =
+				affineScale[0][0] * boxRotated[i][0] +
+				affineScale[0][1] * boxRotated[i][1] +
+				affineScale[0][2] * boxRotated[i][2];
+
+			boxEnlarged[i][1] =
+				affineScale[1][0] * boxRotated[i][0] +
+				affineScale[1][1] * boxRotated[i][1] +
+				affineScale[1][2] * boxRotated[i][2];
+
+			boxEnlarged[i][2] =
+				affineScale[2][0] * boxRotated[i][0] +
+				affineScale[2][1] * boxRotated[i][1] +
+				affineScale[2][2] * boxRotated[i][2];
+		};
+
+		//原点からの距離を足して元の位置に戻す
+		for (int i = 0; i < 4; i++) {
+			boxRotated[i][0] += distanceFromOriginX;
+			boxRotated[i][1] += distanceFromOriginY;
+			boxEnlarged[i][0] += distanceFromOriginX;
+			boxEnlarged[i][1] += distanceFromOriginY;
+		}
+#pragma endregion//拡大縮小
+
+		//アフィン返還した行列を頂点リスト:boxVerticesに代入
+		for (int i = 0; i < _countof(boxVertices); i++) {
+			boxVertices[i].x = boxEnlarged[i][0];
+			boxVertices[i].y = boxEnlarged[i][1];
+			boxVertices[i].z = boxEnlarged[i][2];
+		}
+
+		//全頂点に対して
+		for (int i = 0; i < _countof(boxVertices); i++) {
+			boxVertMap[i] = boxVertices[i];	//座標をコピー
+		}
+
 #pragma endregion//更新処理
 
 #pragma region//描画処理
@@ -640,19 +946,19 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 		commandList->SetGraphicsRootSignature(rootSignature);
 
 		//プリミティブ形状の設定コマンド
-		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
+		commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
 		//頂点バッファビューの設定コマンド
-		commandList->IASetVertexBuffers(0 , 1 , &vbView);
+		commandList->IASetVertexBuffers(0 , 1 , &boxVbView);
 
 		//インデックスバッファビューの設定コマンド
-		commandList->IASetIndexBuffer(&ibView);
+		commandList->IASetIndexBuffer(&boxIbView);
 
 		//頂点バッファ―ビューをセットするコマンド
 		commandList->SetGraphicsRootConstantBufferView(0 , constBuffMaterial->GetGPUVirtualAddress());
 
 		//描画コマンド
-		commandList->DrawInstanced(_countof(indices) , 1 , 0 , 0);	//全ての頂点を使って描画
+		commandList->DrawIndexedInstanced(_countof(boxIndices) , 1 , 0 , 0 , 0);	//全ての頂点を使って描画
 
 #pragma endregion//グラフィックコマンド
 
