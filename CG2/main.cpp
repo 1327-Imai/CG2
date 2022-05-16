@@ -352,10 +352,6 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 	//GPU上のバッファに対応した仮想メモリ(メインメモリ上)を取得
 	XMFLOAT3* vertMap = nullptr;
 	result = vertBuff->Map(0 , nullptr , (void**)&vertMap);
-	//全頂点に対して
-	for (int i = 0; i < _countof(vertices); i++) {
-		vertMap[i] = vertices[i];	//座標をコピー
-	}
 	//繋がりを解除
 	vertBuff->Unmap(0 , nullptr);
 
@@ -444,10 +440,6 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 	//GPU上のバッファに対応した仮想メモリ(メインメモリ上)を取得
 	XMFLOAT3* boxVertMap = nullptr;
 	result = boxVertBuff->Map(0 , nullptr , (void**)&boxVertMap);
-	//全頂点に対して
-	for (int i = 0; i < _countof(boxVertices); i++) {
-		boxVertMap[i] = boxVertices[i];	//座標をコピー
-	}
 	//繋がりを解除
 	boxVertBuff->Unmap(0 , nullptr);
 
@@ -705,6 +697,7 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 #pragma region//更新処理
 
 		//キー入力に応じて変数の値を増減する
+		//移動
 		if (key[DIK_UP]) {
 			transrateY += 5.0/window_height;
 		}
@@ -718,19 +711,25 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 			transrateX += 5.0 / window_width;
 		}
 
+		//拡大縮小
 		if (key[DIK_A]) {
-			scaleX -= 0.01;
+			if (0 < scaleX) {
+				scaleX -= 0.01;
+			}
 		}
 		if (key[DIK_D]) {
 			scaleX += 0.01;
 		}
 		if (key[DIK_S]) {
-			scaleY -= 0.01;
+			if (0 < scaleY) {
+				scaleY -= 0.01;
+			}
 		}
 		if (key[DIK_W]) {
 			scaleY += 0.01;
 		}
 
+		//回転
 		if (key[DIK_Q]) {
 			angle -= PI / 360;
 		}
@@ -738,6 +737,7 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 			angle += PI / 360;
 		}
 
+		//リセット
 		if (key[DIK_R]) {
 			transrateX = 0;
 			transrateY = 0;
@@ -746,6 +746,7 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 			angle = 0;
 		}
 
+		//変数の値をアフィン行列のそれぞれ対応する場所に代入
 		affineTransrate[0][2] = transrateX;
 		affineTransrate[1][2] = transrateY;
 		affineScale[0][0] = scaleX;
