@@ -293,10 +293,10 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 #pragma region//頂点リスト:vertices
 	//頂点データ
 	XMFLOAT3 vertices[] = {
-		{-0.2f , -0.2f , 1.0f} , //左下 インデックス0
-		{-0.2f , +0.2f , 1.0f} , //左上 インデックス1
-		{+0.2f , -0.2f , 1.0f} , //右下 インデックス2
-		{+0.2f , +0.2f , 1.0f} , //右上 インデックス3
+		{-0.2f , -0.2f , 0.0f} , //左下 インデックス0
+		{-0.2f , +0.2f , 0.0f} , //左上 インデックス1
+		{+0.2f , -0.2f , 0.0f} , //右下 インデックス2
+		{+0.2f , +0.2f , 0.0f} , //右上 インデックス3
 	};
 
 	//インデックスデータ
@@ -774,17 +774,17 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 			boxMoved[i][0] =
 				affineTransrate[0][0] * vertices[i].x +
 				affineTransrate[0][1] * vertices[i].y +
-				affineTransrate[0][2] * vertices[i].z;
+				affineTransrate[0][2] * 1.0f;
 
 			boxMoved[i][1] =
 				affineTransrate[1][0] * vertices[i].x +
 				affineTransrate[1][1] * vertices[i].y +
-				affineTransrate[1][2] * vertices[i].z;
+				affineTransrate[1][2] * 1.0f;
 
 			boxMoved[i][2] =
 				affineTransrate[2][0] * vertices[i].x +
 				affineTransrate[2][1] * vertices[i].y +
-				affineTransrate[2][2] * vertices[i].z;
+				affineTransrate[2][2] * 1.0f;
 		};
 
 		//原点からの距離を足して元の位置に戻す
@@ -812,17 +812,17 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 			boxRotated[i][0] =
 				affineRotation[0][0] * boxMoved[i][0] +
 				affineRotation[0][1] * boxMoved[i][1] +
-				affineRotation[0][2] * boxMoved[i][2];
+				affineRotation[0][2] * 1.0f;
 
 			boxRotated[i][1] =
 				affineRotation[1][0] * boxMoved[i][0] +
 				affineRotation[1][1] * boxMoved[i][1] +
-				affineRotation[1][2] * boxMoved[i][2];
+				affineRotation[1][2] * 1.0f;
 
 			boxRotated[i][2] =
 				affineRotation[2][0] * boxMoved[i][0] +
 				affineRotation[2][1] * boxMoved[i][1] +
-				affineRotation[2][2] * boxMoved[i][2];
+				affineRotation[2][2] * 1.0f;
 		};
 
 		//原点からの距離を足して元の位置に戻す
@@ -850,17 +850,17 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 			boxEnlarged[i][0] =
 				affineScale[0][0] * boxRotated[i][0] +
 				affineScale[0][1] * boxRotated[i][1] +
-				affineScale[0][2] * boxRotated[i][2];
+				affineScale[0][2] * 1.0f;
 
 			boxEnlarged[i][1] =
 				affineScale[1][0] * boxRotated[i][0] +
 				affineScale[1][1] * boxRotated[i][1] +
-				affineScale[1][2] * boxRotated[i][2];
+				affineScale[1][2] * 1.0f;
 
 			boxEnlarged[i][2] =
 				affineScale[2][0] * boxRotated[i][0] +
 				affineScale[2][1] * boxRotated[i][1] +
-				affineScale[2][2] * boxRotated[i][2];
+				affineScale[2][2] * 1.0f;
 		};
 
 		//原点からの距離を足して元の位置に戻す
