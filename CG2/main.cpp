@@ -112,7 +112,8 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 
 	//パフォーマンスが高いものをから順に、すべてのアダプターを列挙する
 	for (UINT i = 0;
-		 dxgiFactory->EnumAdapterByGpuPreference(i ,
+		 dxgiFactory->EnumAdapterByGpuPreference(
+		 i ,
 		 DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE ,
 		 IID_PPV_ARGS(&tmpAdapter)) != DXGI_ERROR_NOT_FOUND;
 		 i++) {
@@ -147,8 +148,12 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 
 	for (size_t i = 0; i < _countof(levels); i++) {
 		//採用したアダプターでデバイスを生成
-		result = D3D12CreateDevice(tmpAdapter , levels[i] ,
-								   IID_PPV_ARGS(&device));
+		result = D3D12CreateDevice(
+			tmpAdapter ,
+			levels[i] ,
+			IID_PPV_ARGS(&device)
+		);
+
 		if (result == S_OK) {
 			//デバイスを生成できた時点でループを抜ける
 			featureLevel = levels[i];
@@ -160,14 +165,20 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 	//コマンドアロケータを生成
 	result = device->CreateCommandAllocator(
 		D3D12_COMMAND_LIST_TYPE_DIRECT ,
-		IID_PPV_ARGS(&cmdAllocator));
+		IID_PPV_ARGS(&cmdAllocator)
+	);
+
 	assert(SUCCEEDED(result));
 
 	//コマンドリストを生成
-	result = device->CreateCommandList(0 ,
-									   D3D12_COMMAND_LIST_TYPE_DIRECT ,
-									   cmdAllocator , nullptr ,
-									   IID_PPV_ARGS(&commandList));
+	result = device->CreateCommandList(
+		0 ,
+		D3D12_COMMAND_LIST_TYPE_DIRECT ,
+		cmdAllocator ,
+		nullptr ,
+		IID_PPV_ARGS(&commandList)
+	);
+
 	assert(SUCCEEDED(result));
 
 	//コマンドキュー
@@ -185,12 +196,16 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 	swapChainDesc.SampleDesc.Count = 1;								//マルチサンプルしない
 	swapChainDesc.BufferUsage = DXGI_USAGE_BACK_BUFFER;				//バックバッファ用
 	swapChainDesc.BufferCount = 2;									//バッファ数を2つに設定
-	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;			//フリップ後は破棄
+	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;		//フリップ後は破棄
 	swapChainDesc.Flags = DXGI_SWAP_CHAIN_FLAG_ALLOW_MODE_SWITCH;
 
 	//スワップチェーンの生成
 	result = dxgiFactory->CreateSwapChainForHwnd(
-		commandQueue , hwnd , &swapChainDesc , nullptr , nullptr ,
+		commandQueue ,
+		hwnd,
+		&swapChainDesc ,
+		nullptr ,
+		nullptr ,
 		(IDXGISwapChain1**)&swapChain);
 	assert(SUCCEEDED(result));
 
@@ -235,8 +250,11 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 	//Directinputの初期化
 	IDirectInput8* directInput = nullptr;
 	result = DirectInput8Create(
-		w.hInstance , DIRECTINPUT_VERSION , IID_IDirectInput8 ,
-		(void**)&directInput , nullptr);
+		w.hInstance ,
+		DIRECTINPUT_VERSION ,
+		IID_IDirectInput8 ,
+		(void**)&directInput ,
+		nullptr);
 	assert(SUCCEEDED(result));
 
 	// キーボードデバイスの生成
@@ -260,18 +278,18 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 #pragma region//頂点データ初期化処理
 
 	Mesh* mesh[10];
-	float num1 = 0;
-	float num2 = 0;
+	float randX = 0;
+	float randY = 0;
 
 	for (int i = 0; i < _countof(mesh); i++) {
 
-		num1 = rand() % 16 - 8;
-		num2 = rand() % 16 - 8;
+		randX = rand() % 16 - 8;
+		randY = rand() % 16 - 8;
 
-		XMFLOAT3 vertices[3] = {
-			{-0.1f + (num1 / 10) , -0.1f + (num2 / 10) , 0.0f} ,
-			{-0.1f + (num1 / 10) , +0.1f + (num2 / 10) , 0.0f} ,
-			{+0.1f + (num1 / 10) , -0.1f + (num2 / 10) , 0.0f} ,
+		XMFLOAT3 vertices[] = {
+			{-0.1f + (randX / 10) , -0.1f + (randY / 10) , 0.0f} ,
+			{-0.1f + (randX / 10) , +0.1f + (randY / 10) , 0.0f} ,
+			{+0.1f + (randX / 10) , -0.1f + (randY / 10) , 0.0f} ,
 		};
 
 		mesh[i] = new Mesh(
@@ -292,7 +310,7 @@ int WINAPI WinMain(HINSTANCE , HINSTANCE , LPSTR , int) {
 		D3D_COMPILE_STANDARD_FILE_INCLUDE ,					//インクルード可能にする
 		"main" ,											//エントリーポイント名
 		"vs_5_0" ,											//シェーダーモデル指定
-		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION ,	//デバッグ用設定
+		D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION ,		//デバッグ用設定
 		0 ,
 		&vsBlob ,
 		&errorBlob
