@@ -975,8 +975,8 @@ int WINAPI WinMain(_In_ HINSTANCE , _In_opt_ HINSTANCE , _In_ LPSTR , _In_ int) 
 	D3D12_RESOURCE_DESC textureResouceDesc{};
 	textureResouceDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 	textureResouceDesc.Format = metadata.format;
-	textureResouceDesc.Width = metadata.width;	//幅
-	textureResouceDesc.Height = metadata.height;	//高さ
+	textureResouceDesc.Width = (UINT)metadata.width;	//幅
+	textureResouceDesc.Height = (UINT)metadata.height;	//高さ
 	textureResouceDesc.DepthOrArraySize = (UINT16)metadata.arraySize;
 	textureResouceDesc.MipLevels = (UINT16)metadata.mipLevels;
 	textureResouceDesc.SampleDesc.Count = 1;
@@ -985,8 +985,8 @@ int WINAPI WinMain(_In_ HINSTANCE , _In_opt_ HINSTANCE , _In_ LPSTR , _In_ int) 
 	D3D12_RESOURCE_DESC textureResouceDesc2{};
 	textureResouceDesc2.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
 	textureResouceDesc2.Format = metadata2.format;
-	textureResouceDesc2.Width = metadata2.width;	//幅
-	textureResouceDesc2.Height = metadata2.height;	//高さ
+	textureResouceDesc2.Width = (UINT)metadata2.width;	//幅
+	textureResouceDesc2.Height = (UINT)metadata2.height;	//高さ
 	textureResouceDesc2.DepthOrArraySize = (UINT16)metadata2.arraySize;
 	textureResouceDesc2.MipLevels = (UINT16)metadata2.mipLevels;
 	textureResouceDesc2.SampleDesc.Count = 1;
@@ -1102,6 +1102,16 @@ int WINAPI WinMain(_In_ HINSTANCE , _In_opt_ HINSTANCE , _In_ LPSTR , _In_ int) 
 
 #pragma endregion//描画初期化処理
 
+#pragma region//更新処理用変数
+
+	float red = 0.0f;
+	float green = 0.0f;
+	float blue = 0.0f;
+	float colorChangeValue = 0.005f;
+
+	int colorChangePhase = 0;
+#pragma endregion
+
 #pragma region//ゲームループ
 	while (true) {
 
@@ -1157,6 +1167,41 @@ int WINAPI WinMain(_In_ HINSTANCE , _In_opt_ HINSTANCE , _In_ LPSTR , _In_ int) 
 			UpdataObject3d(&object3ds[i] , matView , matProjection);
 		}
 
+		//色を変移させる
+		if (colorChangePhase == 0) {
+			red += colorChangeValue;
+			if (1 < red) {
+				colorChangePhase = 1;
+			}
+
+			if (0 < blue) {
+				blue -= colorChangeValue;
+			}
+		}
+		else if (colorChangePhase == 1) {
+			green += colorChangeValue;
+			if (1 < green) {
+				colorChangePhase = 2;
+			}
+
+			if (0 < red) {
+				red -= colorChangeValue;
+			}
+		}
+		else if (colorChangePhase == 2) {
+			blue += colorChangeValue;
+			if (1 < blue) {
+				colorChangePhase = 0;
+			}
+
+			if (0 < green) {
+				green -= colorChangeValue;
+			}
+		}
+
+		//色情報の更新
+		constMapMaterial->color = {red , green , blue , 1.0f};
+
 #pragma endregion//更新処理
 
 #pragma region//描画処理
@@ -1179,15 +1224,6 @@ int WINAPI WinMain(_In_ HINSTANCE , _In_opt_ HINSTANCE , _In_ LPSTR , _In_ int) 
 
 		//3.画面クリア
 		FLOAT clearColor[] = {0.1f , 0.25f , 0.5f , 0.0f};
-
-		if (key[DIK_SPACE]) {
-
-			clearColor[0] = 0.5f;
-			clearColor[1] = 0.1f;
-			clearColor[2] = 0.25f;
-			clearColor[3] = 0.0f;
-
-		}
 
 		commandList->ClearRenderTargetView(rtvHandle , clearColor , 0 , nullptr);
 		commandList->ClearDepthStencilView(dsvHandle , D3D12_CLEAR_FLAG_DEPTH , 1.0f , 0 , 0 , nullptr);
